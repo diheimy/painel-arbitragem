@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel de Arbitragem Cripto</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #fff;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: #1e1e1e;
+      padding: 20px;
+      border-radius: 10px;
+    }
+    h1 {
+      color: #00ff99;
+    }
+    .data {
+      margin-top: 20px;
+      font-size: 1.2em;
+      background: #222;
+      padding: 15px;
+      border-radius: 8px;
+    }
+    .positive {
+      color: #00ff99;
+    }
+    .neutral {
+      color: #fff;
+    }
+    .negative {
+      color: #ff4444;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Painel de Arbitragem - NovaDAX x Bybit</h1>
+    <div class="data">
+      <div>NovaDAX BTC/BRL: <span id="btc_brl">Carregando...</span></div>
+      <div>NovaDAX USDT/BRL: <span id="usdt_brl">Carregando...</span></div>
+      <div>Bybit BTC/USDT: <span id="btc_usdt">Carregando...</span></div>
+      <div>BTC da Bybit convertido em BRL: <span id="btc_converted">Carregando...</span></div>
+      <div>Spread: <span id="spread">Carregando...</span></div>
+    </div>
+  </div>
+
+  <script>
+    async function fetchPrices() {
+      try {
+        const [btcBrl, usdtBrl, btcUsdt] = await Promise.all([
+          fetch('https://api.novadax.com/v1/market/ticker?symbol=BTC_BRL').then(r => r.json()),
+          fetch('https://api.novadax.com/v1/market/ticker?symbol=USDT_BRL').then(r => r.json()),
+          fetch('https://api.bybit.com/v5/market/tickers?category=spot&symbol=BTCUSDT').then(r => r.json())
+        ]);
+
+        const preco_ndx_btc = parseFloat(btcBrl.data.ask);
+        const preco_ndx_usdt = parseFloat(usdtBrl.data.ask);
+        const preco_bybit_btc = parseFloat(btcUsdt.result.list[0].ask1Price);
+
+        const preco_bybit_btc_brl = preco_bybit_btc * preco_ndx_usdt;
+        const spread = ((preco_ndx_btc - preco_bybit_btc_brl) / preco_bybit_btc_brl) * 100;
+
+        document.getElementById("btc_brl").textContent = `R$ ${preco_ndx_btc.toFixed(2)}`;
+        document.getElementById("usdt_brl").textContent = `R$ ${preco_ndx_usdt.toFixed(2)}`;
+        document.getElementById("btc_usdt").textContent = `$ ${preco_bybit_btc.toFixed(2)}`;
+        document.getElementById("btc_converted").textContent = `R$ ${preco_bybit_btc_brl.toFixed(2)}`;
+
+        const spreadElem = document.getElementById("spread");
+        spreadElem.textContent = `${spread.toFixed(2)}%`;
+        spreadElem.className = spread > 2 ? 'positive' : (spread > 0 ? 'neutral' : 'negative');
+      } catch (error) {
+        console.error("Erro ao buscar dados:", error);
+      }
+    }
+
+    fetchPrices();
+    setInterval(fetchPrices, 30000); // atualiza a cada 30 segundos
+  </script>
+</body>
+</html>
